@@ -11,21 +11,23 @@ def plotTrial(locPos, locColor, trialTime, i):
     
     meanPos = sum(locPos)/len(locPos)
     maxPos = max(locPos)
-    plt.figure(figsize=(25,4))  
+    plt.figure(figsize=(20,6))  
     plt.scatter(range(len(locPos)), locPos, c=locColor, s=10)
     plt.xlabel("Time (in 50 ms steps)")
     plt.ylabel("Lateral position (m)")
     plt.figtext(.5, 0.95, f"Total trial time = {round(trialTime[0])} ms, Max lateral position = {round(maxPos, 2)} m, Mean lateral position = {round(meanPos, 2)} m", ha="center", fontsize=10)
     plt.title("Lateral position of vehicle over time")
-    # plt.show()
-    plt.savefig(f"2A_{i}.png")
+    #plt.show()
+    plt.subplots_adjust(left=0.04, right=0.98, top=0.9, bottom=0.10)
+
+    plt.savefig(f"2B_{i}.png")
 
 if __name__ == "__main__":
-    for i in range(1, 11):
-        locPos, locColor, trialTime = runTrial(interleaving="word", nrSentences=10, nrWordsPerSentence=17, nrSteeringMovementsWhenSteering=4)
-        plotTrial(locPos, locColor, trialTime, i)
-    # runSimulations2(nrSims=100)
-   
+    #for i in range(1, 11):
+        #locPos, locColor, trialTime = runTrial(interleaving="sentence", nrSentences=10, nrWordsPerSentence=17, nrSteeringMovementsWhenSteering=4)
+        #plotTrial(locPos, locColor, trialTime, i)
+    runSimulations2(nrSims=100)
 
+   
 
 

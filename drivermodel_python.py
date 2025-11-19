@@ -152,7 +152,7 @@ def vehicleUpdateNotSteering():
     return returnValue   ### in m/s
 
 ### Function to run a trial. Needs to be defined by students (section 2 and 3 of assignment)
-def runTrial(nrWordsPerSentence =17, nrSentences=3, nrSteeringMovementsWhenSteering=2, interleaving="word"): 
+def runTrial(nrWordsPerSentence =17, nrSentences=3, nrSteeringMovementsWhenSteering=2, interleaving="word", multisim = False): 
     resetParameters()
 
     locPos = [startingPositionInLane]
@@ -186,7 +186,7 @@ def runTrial(nrWordsPerSentence =17, nrSentences=3, nrSteeringMovementsWhenSteer
             for word in range(nrWordsPerSentence):
                 # print(timePerWord)
                 trialTime += timePerWord
-                locPos, locColor = updatePos(locPos, trialTime, timePerWord + retrievalTimeWord, locColor)
+                locPos, locColor = updatePos(locPos, trialTime, timePerWord, locColor)
             if not (sentence == nrSentences - 1):
                 for i in range(nrSteeringMovementsWhenSteering):
                     startvelocity = vehicleUpdateActiveSteering(locPos[-1])
@@ -217,7 +217,7 @@ def runTrial(nrWordsPerSentence =17, nrSentences=3, nrSteeringMovementsWhenSteer
                         locPos, locColor = calculatePos(locPos, locColor, startvelocity, trialTime)
                         trialTime += steeringUpdateTime
     
-    return locPos, locColor, trialTime
+    if not multisim: return locPos, locColor, trialTime
     meanumpyos = sum(locPos)/len(locPos)
     maxPos = max(locPos)
     return round(trialTime[0]), maxPos, meanumpyos
@@ -243,7 +243,7 @@ def runSimulations(nrSims = 3):
     mean_colors = {"none": "blue", "drivingOnly": "red", "word": "green", "sentence": "black"}
     for condition in conditions:
         for sim in range(nrSims):
-            trialTime, maxPos, meanumpyos = runTrial(interleaving=condition, nrSentences=10, nrWordsPerSentence= rnd.randint(15,20), nrSteeringMovementsWhenSteering=4)
+            trialTime, maxPos, meanumpyos = runTrial(interleaving=condition, nrSentences=10, nrWordsPerSentence= rnd.randint(15,20), nrSteeringMovementsWhenSteering=4, multisim = True)
             totalTime.append(trialTime)
             meanDeviation.append(meanumpyos)
             maxDeviation.append(maxPos)
@@ -353,7 +353,8 @@ def runSimulations2(nrSims = 3):
                 interleaving=condition,
                 nrSentences=10,
                 nrWordsPerSentence=words_per_sentence,
-                nrSteeringMovementsWhenSteering=4
+                nrSteeringMovementsWhenSteering=4,
+                multisim= True
             )
             
             # Store the output in the four vectors
@@ -370,7 +371,7 @@ def runSimulations2(nrSims = 3):
     totalTime = numpy.array(totalTime)
     maxDeviation = numpy.array(maxDeviation)
     Condition = numpy.array(Condition)
-    
+    totalTime = totalTime/1000
     # Create the figure
     plt.figure(figsize=(12, 8))
     
@@ -453,7 +454,7 @@ def runSimulations2(nrSims = 3):
 
     # Add plot titles and labels
     plt.title(f'Max Lateral Deviation vs Trial Time with ({nrSims} Sims per Condition)', fontsize=16)
-    plt.xlabel('Trial Time in MS', fontsize=12)
+    plt.xlabel('Trial Time in S', fontsize=12)
     plt.ylabel('Max Lateral Deviation (meters)', fontsize=12)
     
     # Add the legend
