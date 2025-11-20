@@ -200,7 +200,7 @@ def runTrial(nrWordsPerSentence =17, nrSentences=3, nrSteeringMovementsWhenSteer
             trialTime += retrievalTimeSentence
             locPos, locColor = updatePos(locPos, trialTime, retrievalTimeSentence, locColor)
             for word in range(nrWordsPerSentence):
-                trialTime += timePerWord + retrievalTimeWord
+                trialTime += timePerWord 
                 locPos, locColor = updatePos(locPos, trialTime, timePerWord + retrievalTimeWord, locColor)
                 
     elif interleaving == "drivingOnly":
@@ -210,7 +210,7 @@ def runTrial(nrWordsPerSentence =17, nrSentences=3, nrSteeringMovementsWhenSteer
         for sentence in range(nrSentences):
             trialTime += retrievalTimeSentence
             for word in range(nrWordsPerSentence):
-                trialTime += timePerWord + retrievalTimeWord
+                trialTime += timePerWord 
                 if not (sentence == nrSentences - 1 and word == nrWordsPerSentence - 1):
                     for i in range(nrSteeringMovementsWhenSteering):
                         startvelocity = vehicleUpdateActiveSteering(locPos[-1])
@@ -324,12 +324,12 @@ def runSimulations2(nrSims = 3):
 
     
 
-def updatePos(locPos, trialTime, addedTime, locColor):
+def updatePos(locPos, trialTime, addedTime, locColor, backspace = False):
     totalTime = trialTime % 50
     totalTime += addedTime
     for i in range(math.floor(totalTime/50)):
         locPos.append(locPos[-1] + abs(vehicleUpdateNotSteering()*0.05))
-        locColor.append("red")
+        locColor.append("green" if backspace else "red")
     return locPos, locColor
 
 
@@ -349,7 +349,7 @@ def runSimulations2(nrSims = 3):
             words_per_sentence = rnd.randint(15, 20)
             
             # Run the trial with specified parameters
-            trialTime, maxPos, meanPos = runTrial(
+            trialTime, maxPos, meanPos = runTrialBonus(
                 interleaving=condition,
                 nrSentences=10,
                 nrWordsPerSentence=words_per_sentence,
@@ -467,5 +467,116 @@ def runSimulations2(nrSims = 3):
     
     # Show the plot
     plt.show()
+
+def correctingSteering(locPos, locColor, trialTime):
+    startvelocity = vehicleUpdateActiveSteering(locPos[-1])
+    locPos, locColor = calculatePos(locPos, locColor, startvelocity, trialTime)
+    trialTime += steeringUpdateTime
+    return locPos, locColor, trialTime
     
     
+def runTrialBonus(nrWordsPerSentence =17, nrSentences=3, nrSteeringMovementsWhenSteering=2, interleaving="word", multisim = False): 
+    resetParameters()
+
+    locPos = [startingPositionInLane]
+    trialTime = 0   
+    locColor = ["green"]
+
+    if interleaving == "word":
+        timePerWord =  60000/numpy.random.normal(loc=wordsPerMinuteMean, 
+                                     scale=wordsPerMinuteSD, 
+                                     size=1)
+        for sentence in range(nrSentences):
+            trialTime += retrievalTimeSentence
+            locPos, locColor = updatePos(locPos, trialTime, retrievalTimeSentence, locColor)
+            word = 0
+            while word < (nrWordsPerSentence):
+                error = numpy.random.rand() < 0.2  # 20% chance of error per word
+                discoveredAfterWord = False
+                if error: discoveredAfterWord = numpy.random.rand() < 0.8  # 80% chance of discovering error after word, 20% after sentence
+                trialTime += timePerWord + retrievalTimeWord
+                locPos, locColor = updatePos(locPos, trialTime, timePerWord + retrievalTimeWord, locColor)
+                if not (sentence == nrSentences - 1 and word == nrWordsPerSentence - 1):  #normal steering correction after word
+                    for i in range(nrSteeringMovementsWhenSteering):
+                        locPos, locColor, trialTime = correctingSteering(locPos, locColor, trialTime)
+                if error and discoveredAfterWord:    #case with error discovered after word
+                    timeCancel = numpy.random.normal(loc=1000, scale=200, size=1)      #time taken to cancel word
+                    trialTime += timeCancel
+                    locPos, locColor = updatePos(locPos, trialTime, timeCancel, locColor, True)
+                    for i in range(nrSteeringMovementsWhenSteering):
+                        locPos, locColor, trialTime = correctingSteering(locPos, locColor, trialTime)
+                    word -= 1       #after the word is cancelled, go back one word (correspond to rewriting, it is possible to make an error again)
+                elif error and not discoveredAfterWord:   #case with error discovered after sentence
+                    wordCancel = numpy.random.randint(1, nrWordsPerSentence)      #random number of words to cancel to reach the error    
+                    timeCancel = numpy.random.normal(loc=400, scale=50, size=1) * wordCancel       #time taken to cancel words
+                    trialTime += timeCancel
+                    locPos, locColor = updatePos(locPos, trialTime, timeCancel, locColor, True)
+                    for i in range(nrSteeringMovementsWhenSteering):
+                        locPos, locColor, trialTime = correctingSteering(locPos, locColor, trialTime)
+                    word -= wordCancel      #rewriting all canceled words
+                word += 1    
+    elif interleaving == "sentence":
+        timePerWord =  60000/numpy.random.normal(loc=wordsPerMinuteMean, 
+                                     scale=wordsPerMinuteSD, 
+                                     size=1)
+        for sentence in range(nrSentences):
+            trialTime += retrievalTimeSentence
+            
+            locPos, locColor = updatePos(locPos, trialTime, retrievalTimeSentence, locColor)
+            word = 0
+            while word < (nrWordsPerSentence):
+                error = numpy.random.rand() < 0.2
+                discoveredAfterWord = False
+                if error: discoveredAfterWord = numpy.random.rand() < 0.8
+                trialTime += timePerWord
+                locPos, locColor = updatePos(locPos, trialTime, timePerWord + retrievalTimeWord, locColor)
+                if error and discoveredAfterWord:
+                    timeCancel = numpy.random.normal(loc=1000, scale=200, size=1)
+                    trialTime += timeCancel
+                    locPos, locColor = updatePos(locPos, trialTime, timeCancel, locColor, True)
+                    for i in range(nrSteeringMovementsWhenSteering):
+                        locPos, locColor, trialTime = correctingSteering(locPos, locColor, trialTime)
+                    word -= 1
+                elif error and not discoveredAfterWord:
+                    wordCancel = numpy.random.randint(1, nrWordsPerSentence)
+                    timeCancel = numpy.random.normal(loc=400, scale=50, size=1) * wordCancel
+                    trialTime += timeCancel
+                    locPos, locColor = updatePos(locPos, trialTime, timeCancel, locColor, True)
+                    for i in range(nrSteeringMovementsWhenSteering):
+                        locPos, locColor, trialTime = correctingSteering(locPos, locColor, trialTime)
+                    word -= wordCancel
+                word += 1    
+            if not (sentence == nrSentences - 1):
+                for i in range(nrSteeringMovementsWhenSteering):
+                    startvelocity = vehicleUpdateActiveSteering(locPos[-1])
+                    locPos, locColor = calculatePos(locPos, locColor, startvelocity, trialTime)
+                    trialTime += steeringUpdateTime
+    elif interleaving == "none":
+        timePerWord = 60000/ numpy.random.normal(loc=wordsPerMinuteMean, 
+                                     scale=wordsPerMinuteSD, 
+                                     size=1)
+        for sentence in range(nrSentences):
+            trialTime += retrievalTimeSentence
+            locPos, locColor = updatePos(locPos, trialTime, retrievalTimeSentence, locColor)
+            for word in range(nrWordsPerSentence):
+                trialTime += timePerWord
+                locPos, locColor = updatePos(locPos, trialTime, timePerWord + retrievalTimeWord, locColor)
+                
+    elif interleaving == "drivingOnly":
+        timePerWord =  60000/ numpy.random.normal(loc=wordsPerMinuteMean, 
+                                     scale=wordsPerMinuteSD, 
+                                     size=1)
+        for sentence in range(nrSentences):
+            trialTime += retrievalTimeSentence
+            for word in range(nrWordsPerSentence):
+                trialTime += timePerWord 
+                if not (sentence == nrSentences - 1 and word == nrWordsPerSentence - 1):
+                    for i in range(nrSteeringMovementsWhenSteering):
+                        startvelocity = vehicleUpdateActiveSteering(locPos[-1])
+                        locPos, locColor = calculatePos(locPos, locColor, startvelocity, trialTime)
+                        trialTime += steeringUpdateTime
+    
+    if not multisim: return locPos, locColor, trialTime
+    meanumpyos = sum(locPos)/len(locPos)
+    maxPos = max(locPos)
+    return round(trialTime[0]), maxPos, meanumpyos
